@@ -1,0 +1,52 @@
+# [general]
+general:
+  dataset: nips4b
+
+# [classifier settings]
+classifier:
+  type: xgb
+  save_model: True
+  test_size: 0.2
+  shuffle: True
+  random_state: None
+  tuning: False
+  scoring: Accuracy
+
+random_forest:
+  n_estimators: 200
+  criterion: gini
+  max_depth: 8
+  min_samples_leaf: 16
+  verbose: True
+  n_jobs: -1
+
+# [preprocessing]
+activity_detector:
+  window_length: 0.2
+  window_overlap: 0.1
+  block: 0.2
+  threshold: 0.33
+
+noise_reduce:
+  window_length: 0.5
+  overlap: 0.25
+  nth_oct: 6
+  norm_freq: 2000
+  start_band: -6
+  end_band: 12
+  r_filters: 6
+
+band_filter:
+  filt_min_freq: 1000
+  filt_max_freq: 10000
+
+# Features
+AM:
+  min_mod: 3
+  max_mod: 10
+  prominence_cutoff: 2
+
+FM:
+  window_length: 0.02
+  window_overlap: 0.01
+  threshold: 0.4
