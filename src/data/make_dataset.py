@@ -24,6 +24,8 @@ def main(input_filepath, output_filepath):
     logger = logging.getLogger(__name__)
     logger.info('making final data set from raw data')
 
+    dataset = config['general']["dataset"]
+
     for file in os.listdir(input_filepath):
         logging.info('Pre-processing: ' + file)
         data, samplerate = sf.read(input_filepath + '/' + file)
@@ -67,7 +69,7 @@ def main(input_filepath, output_filepath):
         data += 1E-128 # avoid division by 0, arbitrarily small
         data /= np.max(np.abs(data))
 
-        sf.write(output_filepath + '/' + file, data, samplerate)
+        sf.write(output_filepath + '/' + dataset + '/' + file, data, samplerate)
 
 
 if __name__ == '__main__':
