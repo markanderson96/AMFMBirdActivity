@@ -86,7 +86,7 @@ if __name__ == '__main__':
     if not os.path.isdir(output_loc):
         os.mkdir(output_loc)
 
-    # load config
+    # load config vars
     ad_window_length = config['activity_detector']['window_length']
     ad_window_overlap = config['activity_detector']['window_overlap']
     ad_block_size = config['activity_detector']['block']
