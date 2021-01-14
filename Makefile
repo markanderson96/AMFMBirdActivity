@@ -5,9 +5,8 @@
 #################################################################################
 
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-BUCKET = [OPTIONAL] your-bucket-for-syncing-data (do not include 's3://')
 PROFILE = default
-PROJECT_NAME = AMFM_BAD
+PROJECT_NAME = AMFM_BirdActivity
 PYTHON_INTERPRETER = python
 
 ifeq (,$(shell which conda))
