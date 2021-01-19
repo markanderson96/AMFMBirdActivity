@@ -25,7 +25,6 @@ def makeFeatures(file):
     # load file
     data, samplerate = sf.read(data_dir + os.sep + file)
     logging.info('Processing Features: ' + file)
-    print(file)
     
     # create feature dataframe
     df = pd.DataFrame(columns=[
@@ -130,4 +129,6 @@ if __name__ == '__main__':
     csv_files = glob.glob(os.path.join(interim_feats_dir, "*.csv"))
     df_from_csv_files = (pd.read_csv(f, sep=',') for f in csv_files)
     df_merged = pd.concat(df_from_csv_files, ignore_index=True)
+    df_merged = df_merged.dropna()
+    df_merged = df_merged.drop_duplicates()
     df_merged.to_csv(final_dir + 'features.csv')
