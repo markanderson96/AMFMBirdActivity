@@ -16,32 +16,29 @@ def lengthAdjust():
     logger.info('adjusting length for label congruity')
 
     data_dir = 'data/raw/nips4b/wav/train/'
-    Fs = 44100
-    N = 0
-
+    out_dir = 'data/interim/nips4b/wav/train/'
+    
+    # for filename in os.listdir(data_dir):
+    #     [data, samplerate] = sf.read(data_dir + filename)
+    #     n = data.size // samplerate
+    #     m = data.size % samplerate
+    #     if m < (samplerate / 2):
+    #         n = n + 0.5
+    #     else:
+    #         n = n + 1
+    #     if n > N:
+    #         N = n
     for filename in os.listdir(data_dir):
         [data, samplerate] = sf.read(data_dir + filename)
-        n = data.size // samplerate
-        m = data.size % samplerate
-        if m < (samplerate / 2):
-            n = n + 0.5
-        else:
-            n = n + 1
-        if n > N:
-            N = n
-
-    desired_length = int(Fs * N)
-
-    logger.info("Number of Samples: " + str(desired_length))
-    logger.info("File length: " + str(desired_length/Fs) + "s")
-
-    for filename in os.listdir(data_dir):
-        [data, samplerate] = sf.read(data_dir + filename)
+        desired_length = int(samplerate * N)
+        logger.info('Processing ' + filename)
+        logger.info("Number of Samples: " + str(desired_length))
+        logger.info("File length: " + str(desired_length/samplerate) + "s")
         data = np.asarray(data)
         zero_pad_length = desired_length - data.size
         zero_pad = np.zeros(zero_pad_length)
         data = np.append(data, zero_pad)
-        sf.write(data_dir + filename, data, Fs)
+        sf.write(out_dir + filename, data, samplerate)
 
 def labelConvert():
     logger = logging.getLogger(__name__)
@@ -50,6 +47,8 @@ def labelConvert():
     label_dir = 'data/raw/nips4b/metadata/'
     data = []
     for filename in os.listdir(label_dir):
+        if filename == 'labels.csv':
+            continue
         logger.info('processing: ' + filename)
         df = pd.read_csv(label_dir + filename, header=None, names=['start_time', 'duration', 'hasBird'])
         if df.empty:
@@ -93,12 +92,12 @@ def labelConvert():
         t = 0.0
         i = 0
         j = 0
-        while t + 1.0 <= 6.0:
-            start_time = df.iloc[i, 0]
+        while t + 1.0 <= N:
+            _start_time = df.iloc[i, 0]
             end_time = df.iloc[i, 1]
             hasBird = df.iloc[i, 2]
 
-            if (t + 0.5) <= end_time:
+            if (t + 1.0) <= end_time:
                 data.append(['nips4b_birds_trainfile' + file_id + '-' + str(j), hasBird])
                 t = t + 0.5
                 j = j + 1
@@ -121,6 +120,8 @@ if __name__ == '__main__':
     # find .env automagically by walking up directories until it's found, then
     # load up the .env entries as environment variables
     load_dotenv(find_dotenv())
+
+    N = 6
 
     lengthAdjust()
     labelConvert()
