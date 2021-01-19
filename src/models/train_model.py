@@ -9,7 +9,7 @@ import logging
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score, KFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
-from sklearn.externals import joblib
+#from sklearn.externals import joblib
 from sklearn import metrics
 from matplotlib import pyplot
 from pathlib import Path
@@ -22,15 +22,16 @@ def main():
     logger.info('training model')
 
     dataset = config['general']['dataset']
-    features = 'data/processed' + dataset + 'features.csv'
+    features = 'data/features/' + dataset + '_features.csv'
 
     df = pd.read_csv(features, index_col=None)
-    df = df.drop('fileIndex', axis=1)
     df = df.dropna()
     df = df.drop_duplicates()
+    df = df[df.pitchMean != 0]
+    
 
-    features = [
-        'amDetected',
+    categoric_features = ['amDetected']
+    numeric_features = [
         'amFreq',
         'amDepth',
         'amProminence',
@@ -40,10 +41,18 @@ def main():
         'pitchKurtosis',
     ]
 
-    x_data = df[features]
-    y_data = df['hasBird']
+    categoric_data = df[categoric_features]
+    numeric_data = df[numeric_features]
+    
     #basic scaling
-    x_data = x_data.apply(lambda x: (x - np.mean(x)) / (np.max(x) - np.min(x)))
+    #numeric_data = numeric_data.apply(lambda x: (x - np.mean(x)) / (np.max(x) - np.min(x)))
+    # put data back together
+    x_data = categoric_data.join(numeric_data)
+    print(x_data)
+
+    # labels
+    y_data = df['hasBird']
+
     # Split data 80/20
     x_train, x_test, y_train, y_test = train_test_split(x_data,
                                                         y_data,
@@ -73,7 +82,7 @@ def main():
             print(clf.best_params_)
             quit()
         else:
-            clf = RandomForestClassifier(verbose=config['random_forest']['verbose'],
+            clf = RandomForestClassifier(verbose=config['classifier']['verbose'],
                                         criterion=config['random_forest']['criterion'],
                                         max_depth=config['random_forest']['max_depth'],
                                         min_samples_leaf=config['random_forest']['min_samples_leaf'],
@@ -102,12 +111,12 @@ def main():
             print(clf.best_params_)
             quit()
         else:
-            clf = SVC(verbose=config['svm']['verbose'],
-                    kernel=config['svm']['kernel'],
-                    degree=config['svm']['degree'],
-                    gamma=config['svm']['gamma'],
-                    probability=config['svm']['probability'],
-                    max_iter=config['svm']['max_iter'])
+            clf = SVC(verbose=config['classifier']['verbose'],
+                      kernel=config['svm']['kernel'],
+                      degree=config['svm']['degree'],
+                      gamma=config['svm']['gamma'],
+                      probability=config['svm']['probability'],
+                      max_iter=config['svm']['max_iter'])
             clf.fit(x_train, y_train)
             y_pred = clf.predict(x_test)
             report(y_test, y_pred)
@@ -137,7 +146,7 @@ def main():
             print(clf.best_params_)
             quit()
         else:
-            xgbc = xgb.XGBClassifier(verbosity=config['xgb']['verbose'],
+            xgbc = xgb.XGBClassifier(verbosity=config['classifier']['verbose'],
                                     booster=config['xgb']['booster'],
                                     gamma=config['xgb']['gamma'],
                                     colsample_bytree=config['xgb']['colsample_bytree'],
@@ -182,7 +191,7 @@ def report(y_test, y_pred):
     # Model Recall: what percentage of positive tuples are labelled as such?
     print("Recall:", metrics.recall_score(y_test, y_pred))
     # ROC_AUC
-    fpr, tpr, thresholds = metrics.roc_curve(y_test, y_pred)
+    fpr, tpr, _thresholds = metrics.roc_curve(y_test, y_pred)
     print("AUC:", metrics.auc(fpr, tpr))
 
 if __name__ == '__main__':
