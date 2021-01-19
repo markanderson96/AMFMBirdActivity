@@ -30,6 +30,10 @@ def makeData(file):
     data = np.asarray(data, dtype=np.float32)
 
     # preprocessing
+    # normalise the audio
+    data += 1E-128 # avoid division by 0, arbitrarily small
+    data /= np.max(np.abs(data))
+    
     # activity detector
     ad = AD(data, samplerate, window_length=ad_window_length,
             window_overlap=ad_window_overlap, block_size=ad_block_size,
@@ -46,10 +50,6 @@ def makeData(file):
     # filter
     b = signal.firwin(128, [min_freq, max_freq], pass_zero=False, fs=samplerate)
     data = signal.filtfilt(b, 1.0, data)
-
-    # normalise the audio
-    data += 1E-128 # avoid division by 0, arbitrarily small
-    data /= np.max(np.abs(data))
 
     sf.write(output_loc + file, data, samplerate)       
 
