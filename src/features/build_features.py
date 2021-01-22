@@ -15,6 +15,7 @@ from dotenv import find_dotenv, load_dotenv
 
 from amplitudemod import AM
 from frequencymod import FM
+from parametric import parametric
 
 def runProcess(file_queue):
     while not file_queue.empty():
@@ -26,11 +27,6 @@ def makeFeatures(file):
     data, samplerate = sf.read(data_dir + os.sep + file)
     logging.info('Processing Features: ' + file)
     
-    # create feature dataframe
-    df = pd.DataFrame(columns=[
-        'fileIndex', 
-        'hasBird'
-    ])
 
     # add file indexes and label to feature data frame
     labels = pd.read_csv(label_loc, index_col=None)
@@ -38,9 +34,6 @@ def makeFeatures(file):
     labels = labels.reset_index(drop=True)
     if (labels.empty):
         exit
-
-    df["fileIndex"] = labels["fileIndex"]
-    df["hasBird"] = labels["hasBird"]
     
     # AM
     am = AM(data=data, samplerate=samplerate, min_mod=am_min_mod, 
@@ -59,6 +52,10 @@ def makeFeatures(file):
                 threshold=fm_threshold)
     [pitchMeans, pitchVar, pitchSkew, pitchKurtosis] = fm.calcFM()
 
+    # parametric features
+    pm = parametric(data=data, samplerate=samplerate)
+    [spectralCentroid, spectralRolloff] = pm.parametricFeatures()
+
     features = {
         'amDetected': amDetected,
         'amFreq': amFreq,
@@ -68,10 +65,28 @@ def makeFeatures(file):
         'pitchVar': pitchVar,
         'pitchSkew': pitchSkew,
         'pitchKurtosis': pitchKurtosis,
+        'spectralCentroid': spectralCentroid,
+        'spectralRolloff': spectralRolloff
     }
 
-    features = pd.DataFrame(features)
-    df = df.append(features, ignore_index=True)
+        # create feature dataframe
+    df = pd.DataFrame(features, columns=[
+        'fileIndex', 
+        'hasBird',
+        'amDetected',
+        'amFreq',
+        'amDepth',
+        'amProminence',
+        'pitchMean',
+        'pitchVar',
+        'pitchSkew',
+        'pitchKurtosis',
+        'spectralCentroid',
+        'spectralRolloff'
+    ])
+    df["fileIndex"] = labels["fileIndex"]
+    df["hasBird"] = labels["hasBird"]
+
     df.to_csv(interim_feats_dir + os.sep + file[:-4] + '_features.csv', index=False)
 
 if __name__ == '__main__':
