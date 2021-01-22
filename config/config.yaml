@@ -4,35 +4,35 @@ general:
 
 # [classifier settings]
 classifier:
-  type: xgb
+  type: rf
   save_model: True
   test_size: 0.2
   shuffle: True
   random_state: 0
-  verbose: 1
+  verbose: 0
   grid_search: False
   scoring: accuracy
 
 random_forest:
-  n_estimators: 100
+  n_estimators: 1000
   criterion: gini
-  max_depth: 4
-  min_samples_leaf: 16
+  max_depth: 32
+  min_samples_leaf: 8
   n_jobs: 8
 
 svm:
-  kernel: linear
+  kernel: rbf
   degree: 2 
-  gamma: auto
+  gamma: scale
   probability: True
-  max_iter: 100
+  max_iter: 2000
 
 xgb:
   booster: gbtree
   gamma: 1
   colsample_bytree: 1
-  subsample: 1
-  min_child_weight: 2
+  subsample: 0.1
+  min_child_weight: 1
   lr: 0.02
   max_depth: 5
   n_estimators: 500
@@ -43,8 +43,8 @@ xgb:
 activity_detector:
   window_length: 0.02
   window_overlap: 0.01
-  block: 0.2
-  threshold: 0.33
+  block: 0.1
+  threshold: 0.4
 
 noise_reduce:
   window_length: 0.25
@@ -63,7 +63,7 @@ band_filter:
 AM:
   min_mod: 1
   max_mod: 10
-  prominence_cutoff: 4
+  prominence_cutoff: 5
 
 FM:
   window_length: 0.02
