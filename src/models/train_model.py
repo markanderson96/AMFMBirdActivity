@@ -22,7 +22,7 @@ def main():
     logger.info('training model')
 
     dataset = config['general']['dataset']
-    features = 'data/features/' + dataset + '_features.csv'
+    features = 'data/features/' + dataset + '/features.csv'
 
     df = pd.read_csv(features, index_col=None)
     df = df.dropna()
@@ -39,16 +39,17 @@ def main():
         'pitchVar',
         'pitchSkew',
         'pitchKurtosis',
+        'spectralCentroid',
+        'spectralRolloff'
     ]
 
     categoric_data = df[categoric_features]
     numeric_data = df[numeric_features]
     
     #basic scaling
-    #numeric_data = numeric_data.apply(lambda x: (x - np.mean(x)) / (np.max(x) - np.min(x)))
+    numeric_data = numeric_data.apply(lambda x: (x - np.mean(x)) / (np.max(x) - np.min(x)))
     # put data back together
     x_data = categoric_data.join(numeric_data)
-    print(x_data)
 
     # labels
     y_data = df['hasBird']
@@ -67,7 +68,6 @@ def main():
         if config['classifier']['grid_search']:
             parameters = {
                 "criterion":["gini", "entropy"],
-                "n_estimators":[10, 20, 50, 100, 200, 500],
                 "max_depth":[2, 4, 6, 8, 16, 32, None],
                 "min_samples_leaf":[1, 2, 4, 8, 16, 32, 64, 128]
             }
@@ -87,8 +87,16 @@ def main():
                                         max_depth=config['random_forest']['max_depth'],
                                         min_samples_leaf=config['random_forest']['min_samples_leaf'],
                                         n_estimators=config['random_forest']['n_estimators'],
+                                        class_weight='balanced',
                                         n_jobs=-1)
             clf.fit(x_train, y_train)
+
+            scores = cross_val_score(clf, x_train, y_train, cv=5)
+            print("Mean cross-validation score: %.2f" % scores.mean())
+            kfold = KFold(n_splits=10, shuffle=True)
+            kf_cv_scores = cross_val_score(clf, x_train, y_train, cv=kfold )
+            print("K-fold CV average score: %.2f" % kf_cv_scores.mean())
+
             y_pred = clf.predict(x_test)
             report(y_test, y_pred)
 
@@ -118,6 +126,13 @@ def main():
                       probability=config['svm']['probability'],
                       max_iter=config['svm']['max_iter'])
             clf.fit(x_train, y_train)
+            
+            scores = cross_val_score(clf, x_train, y_train, cv=5)
+            print("Mean cross-validation score: %.2f" % scores.mean())
+            kfold = KFold(n_splits=5, shuffle=True)
+            kf_cv_scores = cross_val_score(clf, x_train, y_train, cv=kfold )
+            print("K-fold CV average score: %.2f" % kf_cv_scores.mean())
+
             y_pred = clf.predict(x_test)
             report(y_test, y_pred)
 
