@@ -60,7 +60,7 @@ class AM(object):
         self.min_mod = min_mod
         self.max_mod = max_mod
         self.N = int(3 * max_mod)
-        self.envelope_Fs = self.N * 2
+        self.envelope_Fs = self.N * 4
         self.prominence_cutoff = prominence_cutoff
         self.detected = []
         self.frequency = []
@@ -85,10 +85,10 @@ class AM(object):
         newNumSamples = int(self.envelope_Fs *
                             (len(envelope) / int(self.samplerate)))
         envelope = resample(envelope, newNumSamples)
-        b = firwin(16, [self.min_mod, self.max_mod],
-                   pass_zero=False,
-                   fs=self.envelope_Fs)
-        envelope = filtfilt(b, 1.0, envelope)
+        # b = firwin(16, [self.min_mod, self.max_mod],
+        #            pass_zero=False,
+        #            fs=self.envelope_Fs)
+        #envelope = filtfilt(b, 1.0, envelope)
         dcValue = np.mean(envelope)
         envelope -= dcValue
 
