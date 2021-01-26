@@ -126,9 +126,11 @@ class AD():
             energy_freq = self.calculateNormalisedEnergy(data_window)
             sum_bird_energy = self.sumEnergyBand(energy_freq)
             sum_energy = sum(energy_freq.values())
-
+            
+            if sum_energy == 0:
+                sum_energy = 1
+            
             bird_ratio = sum_bird_energy / sum_energy
-            #print(bird_ratio)
             detected = bird_ratio > self.threshold
             detected_windows = np.append(detected_windows,
                                          [sample_start, detected])
