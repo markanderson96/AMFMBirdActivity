@@ -35,8 +35,10 @@ def main():
         'pitchVar',
         'pitchSkew',
         'pitchKurtosis',
-        'spectralCentroid',
-        'spectralRolloff'
+        'spectralCentroidMean',
+        'spectralCentroidVar',
+        'spectralRolloffMean',
+        'spectralRolloffVar'
     ]
 
     categoric_data = df[categoric_features]
