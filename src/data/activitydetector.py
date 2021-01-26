@@ -5,10 +5,12 @@ class AD():
     def __init__(self,
                  data,
                  samplerate,
-                 window_length=0.2,
-                 window_overlap=0.1,
-                 block_size=0.2,
-                 threshold=0.2):
+                 window_length,
+                 window_overlap,
+                 block_size,
+                 threshold,
+                 band_start,
+                 band_end):
         """ Constructor for VAD Class """
 
         self.data = data
@@ -17,8 +19,8 @@ class AD():
         self.window_overlap = window_overlap  # Overlap 50%
         self.block_size = block_size  # length of block_size to detect speech in
         self.threshold = threshold  # TODO change to adaptive VAD this is for testing a simple version
-        self.bird_band_start = 1000
-        self.bird_band_end = 8000
+        self.bird_band_start = band_start
+        self.bird_band_end = band_end
 
     def calculateEnergy(self, data):
         """ Calculate Energy in signal chunk

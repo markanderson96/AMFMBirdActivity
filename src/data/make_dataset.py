@@ -33,13 +33,17 @@ def makeData(file):
     # normalise the audio
     data += 1E-128 # avoid division by 0, arbitrarily small
     data /= np.max(np.abs(data))
-    
+
     # activity detector
     ad = AD(data, samplerate, window_length=ad_window_length,
             window_overlap=ad_window_overlap, block_size=ad_block_size,
-            threshold=ad_threshold)
-    data = ad.reconstruct()
+            threshold=ad_threshold, band_start=band_start, band_end=band_end)
+    #data = ad.reconstruct()
 
+    # filter
+    #b = signal.firwin(128, [min_freq, max_freq], pass_zero=False, fs=samplerate)
+    #data = signal.filtfilt(b, 1.0, data)
+        
     # noise reduction
     nr = noiseReduction(samplerate=samplerate, window_size=nr_window_size,
                         window_overlap=nr_overlap, nth_oct=nr_nth_oct,
@@ -47,9 +51,14 @@ def makeData(file):
                         end_band=nr_end_band, r_filters=nr_r_filters)
     data = nr.noiseReduction(data)
 
+    # Normalise again
+    data += 1E-128 # avoid division by 0, arbitrarily small
+    data /= np.max(np.abs(data))
+
     # filter
     b = signal.firwin(128, [min_freq, max_freq], pass_zero=False, fs=samplerate)
     data = signal.filtfilt(b, 1.0, data)
+
 
     sf.write(output_loc + file, data, samplerate)       
 
@@ -91,6 +100,8 @@ if __name__ == '__main__':
     ad_window_overlap = config['activity_detector']['window_overlap']
     ad_block_size = config['activity_detector']['block']
     ad_threshold = config['activity_detector']['threshold']
+    band_start = config['activity_detector']['band_start']
+    band_end = config['activity_detector']['band_end']
     nr_window_size = config['noise_reduce']['window_length']
     nr_overlap = config['noise_reduce']['overlap']
     nr_nth_oct = config['noise_reduce']['nth_oct']

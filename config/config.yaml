@@ -11,13 +11,13 @@ classifier:
   random_state: 0
   verbose: 0
   grid_search: False
-  scoring: accuracy
+  scoring: precision
 
 random_forest:
-  n_estimators: 1000
+  n_estimators: 200
   criterion: gini
-  max_depth: 32
-  min_samples_leaf: 8
+  max_depth: 8
+  min_samples_leaf: 4
   n_jobs: 8
 
 svm:
@@ -41,10 +41,12 @@ xgb:
 
 # [preprocessing]
 activity_detector:
-  window_length: 0.02
-  window_overlap: 0.01
-  block: 0.1
-  threshold: 0.4
+  window_length: 0.1
+  window_overlap: 0.05
+  block: 0.5
+  threshold: 0.35
+  band_start: 800
+  band_end: 10000
 
 noise_reduce:
   window_length: 0.25
