@@ -27,13 +27,18 @@ def makeFeatures(file):
     data, samplerate = sf.read(data_dir + os.sep + file)
     logging.info('Processing Features: ' + file)
     
+    # check if any data
+    if not np.any(data):
+        logging.warning(file + ' contains no data')
+        return
 
     # add file indexes and label to feature data frame
     labels = pd.read_csv(label_loc, index_col=None)
     labels = labels[labels['fileIndex'].str.contains(file[:-4])]
     labels = labels.reset_index(drop=True)
     if (labels.empty):
-        exit
+        logging.warning(file + ' has no labels')
+        return
     
     # AM
     am = AM(data=data, samplerate=samplerate, min_mod=am_min_mod, 
@@ -147,3 +152,4 @@ if __name__ == '__main__':
     df_merged = df_merged.dropna()
     df_merged = df_merged.drop_duplicates()
     df_merged.to_csv(final_dir + 'features.csv')
+    logging.info('Processing Features Completed')
