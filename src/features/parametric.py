@@ -40,6 +40,8 @@ class parametric(object):
     def spectralCentroid(self, X):
         length = len(X)
         freqs = np.abs(np.fft.fftfreq(length, 1.0/self.samplerate)) # positive frequencies
+        if not np.any(X):
+            X[0] = 1
         centroid = np.sum(X*freqs) / np.sum(X) # weighted mean
         return centroid
 
@@ -47,7 +49,6 @@ class parametric(object):
         norm = X.sum() # get normalisation value
         if norm == 0:
             norm = 1
-        #norm[norm == 0] = 1 # prevent division by 0
         X = np.cumsum(X) / norm # normalised cumulative sum
         vsr = np.argmax(X >= 0.95)
         vsr = vsr / (X.shape[0] - 1) * (self.samplerate / 2)
