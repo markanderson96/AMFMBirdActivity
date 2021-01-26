@@ -58,8 +58,8 @@ def makeFeatures(file):
     [pitchMeans, pitchVar, pitchSkew, pitchKurtosis] = fm.calcFM()
 
     # parametric features
-    pm = parametric(data=data, samplerate=samplerate)
-    [spectralCentroid, spectralRolloff] = pm.parametricFeatures()
+    pm = parametric(data=data, samplerate=samplerate, window_length=0.02, window_overlap=0.1)
+    [spectralCentroidMean, spectralCentroidVar, spectralRolloffMean, spectralRolloffVar] = pm.parametricFeatures()
 
     features = {
         'amDetected': amDetected,
@@ -70,8 +70,10 @@ def makeFeatures(file):
         'pitchVar': pitchVar,
         'pitchSkew': pitchSkew,
         'pitchKurtosis': pitchKurtosis,
-        'spectralCentroid': spectralCentroid,
-        'spectralRolloff': spectralRolloff
+        'spectralCentroidMean': spectralCentroidMean,
+        'spectralCentroidVar': spectralCentroidVar,
+        'spectralRolloffMean': spectralRolloffMean,
+        'spectralRolloffVar': spectralRolloffVar
     }
 
         # create feature dataframe
@@ -86,8 +88,10 @@ def makeFeatures(file):
         'pitchVar',
         'pitchSkew',
         'pitchKurtosis',
-        'spectralCentroid',
-        'spectralRolloff'
+        'spectralCentroidMean',
+        'spectralCentroidVar',
+        'spectralRolloffMean',
+        'spectralRolloffVar'
     ])
     df["fileIndex"] = labels["fileIndex"]
     df["hasBird"] = labels["hasBird"]
@@ -137,16 +141,17 @@ if __name__ == '__main__':
     fm_window_overlap = config['FM']['window_overlap']
     fm_threshold = config['FM']['threshold']
 
-    # create and fill queue
+    #create and fill queue
     file_queue = multiprocessing.Queue()
     for file in os.listdir(data_dir):
-        file_queue.put(file)
+       file_queue.put(file)
 
     pool = multiprocessing.Pool(None, runProcess, (file_queue,))
     pool.close()
     pool.join()
 
     csv_files = glob.glob(os.path.join(interim_feats_dir, "*.csv"))
+    #print(csv_files)
     df_from_csv_files = (pd.read_csv(f, sep=',') for f in csv_files)
     df_merged = pd.concat(df_from_csv_files, ignore_index=True)
     df_merged = df_merged.dropna()
