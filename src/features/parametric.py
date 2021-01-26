@@ -1,21 +1,41 @@
 import numpy as np
 
 class parametric(object):
-    def __init__(self, data, samplerate):
+    def __init__(self, data, samplerate, window_length, window_overlap):
         self.data = data
         self.samplerate = samplerate
+        self.window_length = int(window_length * self.samplerate)
+        self.window_overlap = int(window_overlap * self.samplerate)
 
     def parametricFeatures(self):
-        centroids = []
-        rolloff = []
+        mSC = []
+        vSC = []
+        mR = []
+        vR = []
         ii = 0
         while ii + self.samplerate <= len(self.data):
-            x = self.data[ii:ii + self.samplerate] # get data block
-            X = np.abs(np.fft.rfft(x)) 
-            centroids.append(self.spectralCentroid(X))
-            rolloff.append(self.rollOff(X))
+            block = self.data[ii:ii + self.samplerate] # get data block
+            centroids = []
+            rolloff = []
+            jj = 0         
+            while jj + self.window_length <= len(block):
+                x = block[jj:jj + self.window_length]
+                X = np.abs(np.fft.rfft(x))
+                centroids.append(self.spectralCentroid(X))
+                rolloff.append(self.rollOff(X))
+                jj += int(self.window_overlap)
+
+            mSC.append(np.mean(np.ma.masked_array(centroids, np.isnan(centroids))))
+            vSC.append(np.var(np.ma.masked_array(centroids, np.isnan(centroids))))
+            mR.append(np.mean(np.ma.masked_array(rolloff, np.isnan(rolloff))))
+            vR.append(np.var(np.ma.masked_array(rolloff, np.isnan(rolloff))))
+
+            del centroids
+            del rolloff
+
             ii += int(self.samplerate/2)
-        return centroids, rolloff
+
+        return mSC, vSC, mR, vR
 
     def spectralCentroid(self, X):
         length = len(X)
