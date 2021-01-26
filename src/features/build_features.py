@@ -151,7 +151,6 @@ if __name__ == '__main__':
     pool.join()
 
     csv_files = glob.glob(os.path.join(interim_feats_dir, "*.csv"))
-    #print(csv_files)
     df_from_csv_files = (pd.read_csv(f, sep=',') for f in csv_files)
     df_merged = pd.concat(df_from_csv_files, ignore_index=True)
     df_merged = df_merged.dropna()
