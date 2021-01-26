@@ -38,12 +38,8 @@ def makeData(file):
     ad = AD(data, samplerate, window_length=ad_window_length,
             window_overlap=ad_window_overlap, block_size=ad_block_size,
             threshold=ad_threshold, band_start=band_start, band_end=band_end)
-    #data = ad.reconstruct()
+    data = ad.reconstruct()
 
-    # filter
-    #b = signal.firwin(128, [min_freq, max_freq], pass_zero=False, fs=samplerate)
-    #data = signal.filtfilt(b, 1.0, data)
-        
     # noise reduction
     nr = noiseReduction(samplerate=samplerate, window_size=nr_window_size,
                         window_overlap=nr_overlap, nth_oct=nr_nth_oct,
@@ -54,11 +50,6 @@ def makeData(file):
     # Normalise again
     data += 1E-128 # avoid division by 0, arbitrarily small
     data /= np.max(np.abs(data))
-
-    # filter
-    b = signal.firwin(128, [min_freq, max_freq], pass_zero=False, fs=samplerate)
-    data = signal.filtfilt(b, 1.0, data)
-
 
     sf.write(output_loc + file, data, samplerate)       
 
