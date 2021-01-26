@@ -9,7 +9,6 @@ import logging
 from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score, KFold
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
-#from sklearn.externals import joblib
 from sklearn import metrics
 from matplotlib import pyplot
 from pathlib import Path
@@ -25,11 +24,8 @@ def main():
     features = 'data/features/' + dataset + '/features.csv'
 
     df = pd.read_csv(features, index_col=None)
-    df = df.dropna()
-    df = df.drop_duplicates()
-    df = df[df.pitchMean != 0]
+    #df = df[df.pitchMean != 0]
     
-
     categoric_features = ['amDetected']
     numeric_features = [
         'amFreq',
@@ -50,6 +46,7 @@ def main():
     numeric_data = numeric_data.apply(lambda x: (x - np.mean(x)) / (np.max(x) - np.min(x)))
     # put data back together
     x_data = categoric_data.join(numeric_data)
+    x_data = numeric_data
 
     # labels
     y_data = df['hasBird']
