@@ -17,17 +17,7 @@ def lengthAdjust():
 
     data_dir = 'data/raw/nips4b/wav/train/'
     out_dir = 'data/interim/nips4b/wav/train/'
-    
-    # for filename in os.listdir(data_dir):
-    #     [data, samplerate] = sf.read(data_dir + filename)
-    #     n = data.size // samplerate
-    #     m = data.size % samplerate
-    #     if m < (samplerate / 2):
-    #         n = n + 0.5
-    #     else:
-    #         n = n + 1
-    #     if n > N:
-    #         N = n
+
     for filename in os.listdir(data_dir):
         [data, samplerate] = sf.read(data_dir + filename)
         desired_length = int(samplerate * N)
@@ -71,7 +61,7 @@ def labelConvert():
 
         # merge with original data
         end_time = df.iloc[i-1, 1]
-        noBird = np.append(noBird, [[end_time, 5.5, 0]], axis=0)
+        noBird = np.append(noBird, [[end_time, 6.0, 0]], axis=0)
         noBird = pd.DataFrame(noBird, columns=['start_time', 'end_time', 'hasBird'])    
         df = df.append(noBird)
         df = df.sort_values(by='start_time')
@@ -85,6 +75,7 @@ def labelConvert():
         dup_indices = df[(df['start_time'] == df['end_time'])].index
         df = df.drop(dup_indices)
         df = df.reset_index(drop=True)
+        print(df)
 
 
         file_id = re.findall(r'-?\d+?\d*', filename)[0]
@@ -93,7 +84,7 @@ def labelConvert():
         i = 0
         j = 0
         while t + 1.0 <= N:
-            _start_time = df.iloc[i, 0]
+            #_start_time = df.iloc[i, 0]
             end_time = df.iloc[i, 1]
             hasBird = df.iloc[i, 2]
 

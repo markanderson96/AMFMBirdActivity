@@ -5,17 +5,21 @@ cffi==1.14.4
 chardet==4.0.0
 click==7.1.2
 coverage==5.3.1
+cycler==0.10.0
 docutils==0.16
 flake8==3.8.4
 idna==2.10
 imagesize==1.2.0
 Jinja2==2.11.2
 joblib==1.0.0
+kiwisolver==1.3.1
 MarkupSafe==1.1.1
+matplotlib==3.3.3
 mccabe==0.6.1
 numpy==1.19.5
 packaging==20.8
 pandas==1.2.0
+Pillow==8.1.0
 pycodestyle==2.6.0
 pycparser==2.20
 pyfilterbank @ git+https://github.com/SiggiGue/pyfilterbank.git@5d74af8d936d79dcb61f7f35a3120d79ea93480b
@@ -29,6 +33,7 @@ PyYAML==5.3.1
 requests==2.25.1
 scikit-learn==0.24.0
 scipy==1.6.0
+seaborn==0.11.1
 six==1.15.0
 snowballstemmer==2.0.0
 SoundFile==0.10.3.post1
@@ -41,3 +46,4 @@ sphinxcontrib-qthelp==1.0.3
 sphinxcontrib-serializinghtml==1.1.4
 threadpoolctl==2.1.0
 urllib3==1.26.2
+xgboost==1.3.2

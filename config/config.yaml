@@ -4,47 +4,37 @@ general:
 
 # [classifier settings]
 classifier:
-  type: rf
+  classifier_type: svm
   save_model: True
   test_size: 0.2
   shuffle: True
   random_state: 0
   verbose: 0
-  grid_search: False
-  scoring: accuracy
+  grid_search: True
+  scoring: f1
 
 random_forest:
-  n_estimators: 1000
-  criterion: gini
-  max_depth: 32
+  n_estimators: 500
+  criterion: entropy
+  max_depth: 8
   min_samples_leaf: 8
-  n_jobs: 8
+  n_jobs: -1
 
 svm:
-  kernel: rbf
+  kernel: linear
   degree: 2 
-  gamma: scale
+  gamma: auto
   probability: True
-  max_iter: 2000
-
-xgb:
-  booster: gbtree
-  gamma: 1
-  colsample_bytree: 1
-  subsample: 0.1
-  min_child_weight: 1
-  lr: 0.02
-  max_depth: 5
-  n_estimators: 500
-  eval_metric: logloss
-  scale_pos_weight: 1.8
+  max_iter: -1
 
 # [preprocessing]
 activity_detector:
-  window_length: 0.02
-  window_overlap: 0.01
-  block: 0.1
+  window_length: 0.1
+  window_overlap: 0.05
+  block: 0.5
   threshold: 0.4
+  band_start: 800
+  band_end: 16000
 
 noise_reduce:
   window_length: 0.25
@@ -57,13 +47,14 @@ noise_reduce:
 
 band_filter:
   filt_min_freq: 800
-  filt_max_freq: 10000
+  filt_max_freq: 16000
 
 # Features
 AM:
   min_mod: 1
   max_mod: 10
-  prominence_cutoff: 5
+  prominence_cutoff: 3
+  depth_threshold: 0.01
 
 FM:
   window_length: 0.02
