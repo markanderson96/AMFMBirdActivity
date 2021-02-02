@@ -1,10 +1,13 @@
 import numpy as np
 import math
 import sys
+from dataclasses import dataclass, field
 
 from scipy.fft import fft, fftfreq, ifft
 from scipy.signal import argrelmax, hilbert, resample, firwin, filtfilt
 from scipy.stats import skew, kurtosis
+
+from pyfilterbank.octbank import FractionalOctaveFilterbank
 
 class AM(object):
     """ 
@@ -29,15 +32,17 @@ class AM(object):
 
     Methods
     -------
-    getEnv(self)
+    getHilbertEnv(self)
         Extracts amplitude envelope via hilbert transform and resamples it
         to envelope_Fs
     calcAM(self)
         Calculate whether AM is detected, and if it is, it's frequency,
         modulation depth and prominence
+    _calcAMBand(self, data)
+        Calculate wheter AM is present in a given band (internal method of calcAM() )
     
     """
-    def __init__(self, data, samplerate, min_mod, max_mod, prominence_cutoff):
+    def __init__(self, data, samplerate, min_mod, max_mod, prominence_cutoff, depth_threshold):
         """ 
         Constructor for AM Class 
 
@@ -59,15 +64,13 @@ class AM(object):
         self.samplerate = samplerate
         self.min_mod = min_mod
         self.max_mod = max_mod
-        self.N = int(3 * max_mod)
-        self.envelope_Fs = self.N * 4
+        self.blocks = int((np.round(2 * len(self.data) / self.samplerate)) - 1)
+        self.N = 100
+        self.envelope_Fs = 100
         self.prominence_cutoff = prominence_cutoff
-        self.detected = []
-        self.frequency = []
-        self.depth = []
-        self.prominence = []
+        self.depth_threshold = depth_threshold
 
-    def getEnv(self):
+    def getHilbertEnv(self):
         """ 
         Extracts the Envelope of a signal via Hilbert Transform
             
@@ -85,19 +88,18 @@ class AM(object):
         newNumSamples = int(self.envelope_Fs *
                             (len(envelope) / int(self.samplerate)))
         envelope = resample(envelope, newNumSamples)
-        # b = firwin(16, [self.min_mod, self.max_mod],
-        #            pass_zero=False,
-        #            fs=self.envelope_Fs)
-        #envelope = filtfilt(b, 1.0, envelope)
-        dcValue = np.mean(envelope)
-        envelope -= dcValue
 
         return envelope
-
+    
     def calcAM(self):
         """ 
-        Determine in AM present, if so calculate AM Frequency, 
+        Determine in AM present in files/windows,
+        if so calculate AM Frequency, 
         AM Modulation Depth and AM Prominence.
+
+
+        Goes through several frequency bands to determine best
+        envelope to extract
 
         Parameters
         ----------
@@ -115,157 +117,254 @@ class AM(object):
         am_prominence : np.array(dtype=np.float64)
             If AM detected, contains prominence, otherwise 0
         """
+        _freqs = [500,630,800,1000,1250,1600,2000,2500,3150,4000,5000,6300,8000,10000,12500,16000]
+        freqs_i = [-3,-2,-1,0,1,2,3,4,5,6,7,8,9,10,11,12]
 
-        envelope = self.getEnv()
+        @dataclass
+        class results:
+            detected: list[int] = field(default_factory=list)
+            frequency: list[float] = field(default_factory=list)
+            depth: list[float] = field(default_factory=list)
+            prominence: list[float] = field(default_factory=list)
+            env: list[float] = field(default_factory=list)
+        
+        result = results()
 
-        ii = 0
-        while ii + self.envelope_Fs <= len(envelope):
-            # detrend
-            t = np.linspace(0, 1, self.envelope_Fs, endpoint=False)
-            poly_coeff = np.polyfit(t, envelope[ii:ii + self.envelope_Fs], 3)  # coefficients for 3rd order fit
-            envelope[ii:ii + self.envelope_Fs] -= np.polyval(poly_coeff, t)  # calculate and subtract
+        band_1 = results()
+        band_2 = results()
+        band_3 = results()
+        band_4 = results()
 
-            # FFT
-            i_freq = np.arange(1, self.N / 2, dtype=int)  # indices for frequency components
-            freqs = fftfreq(self.N, 1.0 / self.envelope_Fs)  # frequencies to match output from DFT
-            fft_out = fft(envelope[ii:ii + self.envelope_Fs])
+        results_list = [band_1, band_2, band_3, band_4]
 
-            # calculate power spectrum
-            ps = (abs(fft_out[i_freq])**2 + abs(fft_out[-i_freq])**2) / self.N/2**2
-            freqs_ps = freqs[i_freq]
+        for i in range(4):
+            k1 = freqs_i.index(i * 3 - 3)
+            k2 = freqs_i.index(i * 3 + 3)
+            ofb = FractionalOctaveFilterbank(sample_rate=self.samplerate, 
+                                            order=8, nth_oct=3.0, norm_freq=1000,
+                                            start_band=freqs_i[k1],
+                                            end_band=freqs_i[k2], filterfun='py')
 
-            # find i_max_ps
-            i_max_ps = argrelmax(ps)[0]
-            freqs_max = freqs_ps[i_max_ps]
+            Leq = []
+            samples_per_10ms = round(self.samplerate/100)
+            slices_in_file = math.floor(len(self.data) / samples_per_10ms)
+            
+            for x in range(slices_in_file):
+                idx = x * samples_per_10ms
+                bands, _states = ofb.filter(self.data[idx:idx + samples_per_10ms])
+                L = np.sqrt(np.mean(bands*bands))
+                Leq.append(L)
 
-            # indices of specified mod i_pos_freqs
-            i_freq_in_range = (freqs_max >= self.min_mod) & (freqs_max <=
-                                                        self.max_mod)
-            freqsValid = freqs_max[i_freq_in_range]
-            # if no peaks return nothing
-            if not np.any(i_freq_in_range):
-                self.detected.append(0)
-                self.frequency.append(0)
-                self.depth.append(0)
-                self.prominence.append(0)
-                ii += int(self.envelope_Fs / 2)
-                continue
+            results_list[i].env = Leq
 
-            # indices of valid peaks
-            iPeaks = [np.where(freqs_ps == x)[0][0] for x in freqsValid]
-            maxVal = max(ps[iPeaks])  # find highest peaks
-            i_max_peak = np.where(ps == maxVal)[0][0]
-            fundamental_freq = freqs_ps[
-                i_max_peak]  # its the fundamental frequency
+            ii = 0
+            while ii + 100 <= len(Leq):
+                results = self._calcAMBand(Leq[ii:ii+100])
+                results_list[i].detected += [results['detected']]
+                results_list[i].frequency += [results['freq']]
+                results_list[i].depth += [results['depth']]
+                results_list[i].prominence += [results['prominence']]
+                ii += 50
 
-            # find peak prominence
-            i_averages = [
-                i_max_peak + x for x in [-3, -2, 2, 3]
-                if i_max_peak + x in range(len(ps))
-            ]
-            average = np.average(ps[i_averages]) # average of frequencies around peak
-            prominence = maxVal / float(average) # ratio of peak to average_around
+            del Leq
 
-            # check if prominence greater than threshold
-            if prominence < self.prominence_cutoff:
-                self.detected.append(0)
-                self.frequency.append(0)
-                self.depth.append(0)
-                self.prominence.append(0)
-                ii += int(self.envelope_Fs / 2)
-                continue
+        for i in range(self.blocks):
+            band_of_interest = 0
+            max_prominence = 0
+            for j in range(4):
+                prominence = np.max(results_list[j].prominence[i])
+                if prominence > max_prominence:
+                    band_of_interest = j
+                    max_prominence = prominence
+        
+            result.detected.append(results_list[band_of_interest].detected[i])
+            result.frequency.append(results_list[band_of_interest].frequency[i])
+            result.depth.append(results_list[band_of_interest].depth[i])
+            result.prominence.append(results_list[band_of_interest].prominence[i])
+            result.env.extend(results_list[band_of_interest].env[i * 50 : i * 50 + 100])
+        
+        return result.detected, result.frequency, result.depth, result.prominence, result.env
 
-            # inverse transform, need indices around peaks
-            i_includes = [
-                i_max_peak + x for x in [-1, 0, 1]
-                if i_max_peak + x in range(len(ps))
-            ]
+    def _calcAMBand(self, Leq):
+        """ 
+        Determine in AM present, if so calculate AM Frequency, 
+        AM Modulation Depth and AM Prominence.
 
-            # inverse transform of fundamental
-            i_pos_freqs =  i_freq[i_includes] 
-            i_neg_freqs = -i_freq[i_includes] 
-            fft_out_fundamental = np.zeros_like(fft_out) 
-            fft_out_fundamental[i_pos_freqs] = fft_out[i_pos_freqs]
-            fft_out_fundamental[i_neg_freqs] = fft_out[i_neg_freqs]
-            fundamental_sine = np.real(ifft(fft_out_fundamental)) # inverse transform for fundamental
+        Parameters
+        ----------
+        Leq : np.array(dtype=np.float64)
+            Time series of envelope to calculate AM in
 
-            # Check peak to peak value of fundamental sine wave should be greater than 1.5 dB
-            fundamental_pp = max(fundamental_sine) - min(fundamental_sine)
-            if (fundamental_pp > 1.5):
-                for i in [2, 3]:
-                    # estimate harmonics
-                    harmonic_freq = fundamental_freq * i
-                    i_harmonic = (np.abs(freqs_ps - harmonic_freq)).argmin()
-                    harmonic_freq = freqs_ps[i_harmonic]
+        Returns
+        -------
+        am_detected : np.array(dtype=np.bool_)
+            Array of booleans denoting whether AM is detected in 
+            each block
+        am_frequency : np.array(dtype=np.float64)
+            If AM detected, contains frequency, otherwise 0
+        am_mod_depth : np.array(dtype=np.float64)
+            If AM detected, contains mod depth, otherwise 0
+        am_prominence : np.array(dtype=np.float64)
+            If AM detected, contains prominence, otherwise 0
+        """
 
-                    # check if local max
-                    if i_harmonic not in i_max_ps:
-                        # check surrounding indices
-                        i_harmonic_new = None
-                        if i == 2:
-                            i_search = [-1, 0, 1]
-                        else:
-                            i_search = [-2, -1, 0, 1, 2]
+        # some constants
+        block_in_secs = 1
+        fs = self.envelope_Fs
+        N = self.N
 
-                        # get indices from search
-                        i_harmonic_search = [(i_harmonic + x) for x in i_search
-                                           if (i_harmonic + x) in range(len(ps))
-                                        ]
+        # detrend
+        t = np.linspace(0, block_in_secs, len(Leq), endpoint=False)
+        poly_coeff = np.polyfit(t, Leq, 3)  # coefficients for 3rd order fit
+        Leq -= np.polyval(poly_coeff, t)  # calculate and subtract
 
-                        if np.any([x in i_max_ps for x in i_harmonic_search]):
-                            i_surrounding_peaks = [
-                                x for x in i_harmonic_search if x in i_max_ps
-                            ]
-                            vals_peaks = ps[i_surrounding_peaks]
-                            i_harmonic_new = i_surrounding_peaks[
-                                vals_peaks.tolist().index(max(vals_peaks))]
+        # FFT
+        i_freq = np.arange(1, N / 2, dtype=int)  # indices for frequency components
+        freqs = fftfreq(N, 1.0 / fs)  # frequencies to match output from DFT
+        fft_out = fft(Leq)
 
-                        if i_harmonic_new:
-                            i_harmonic = [
-                                i_harmonic_new + x for x in i_search
-                                if i_harmonic_new + x in range(len(ps))
-                            ]
-                        else:
-                            continue
+        # calculate power spectrum
+        ps = (abs(fft_out[i_freq])**2 + abs(fft_out[-i_freq])**2) / self.N/2**2
+        freqs_ps = freqs[i_freq]
+
+        # find i_max_ps
+        i_max_ps = argrelmax(ps)[0]
+        freqs_max = freqs_ps[i_max_ps]
+
+        # indices of specified mod i_pos_freqs
+        i_freq_in_range = (freqs_max >= self.min_mod) & (freqs_max <= self.max_mod)
+        freqsValid = freqs_max[i_freq_in_range]
+        # if no peaks return nothing
+        if not np.any(i_freq_in_range):
+            results = {'detected'    : 0,
+                       'freq'        : 0,
+                       'depth'       : 0,
+                       'prominence'  : 0
+            }
+            return results
+
+        # indices of valid peaks
+        iPeaks = [np.where(freqs_ps == x)[0][0] for x in freqsValid]
+        maxVal = np.max(ps[iPeaks])  # find highest peaks
+        i_max_peak = np.where(ps == maxVal)[0][0]
+        fundamental_freq = freqs_ps[i_max_peak]  # its the fundamental frequency
+
+        # find peak prominence
+        i_averages = [
+            i_max_peak + x for x in [-3, -2, 2, 3]
+            if i_max_peak + x in range(len(ps))
+        ]
+        average = np.average(ps[i_averages]) # average of frequencies around peak
+        prominence = maxVal / float(average) # ratio of peak to average_around
+
+        # check if prominence greater than threshold
+        if prominence < self.prominence_cutoff:
+            results = {'detected'    : 0,
+                       'freq'        : 0,
+                       'depth'       : 0,
+                       'prominence'  : 0
+            }
+            return results
+
+        # inverse transform, need indices around peaks
+        i_includes = [
+            i_max_peak + x for x in [-1, 0, 1]
+            if i_max_peak + x in range(len(ps))
+        ]
+
+        # inverse transform of fundamental
+        i_pos_freqs =  i_freq[i_includes] 
+        i_neg_freqs = -i_freq[i_includes] 
+        fft_out_fundamental = np.zeros_like(fft_out) 
+        fft_out_fundamental[i_pos_freqs] = fft_out[i_pos_freqs]
+        fft_out_fundamental[i_neg_freqs] = fft_out[i_neg_freqs]
+        fundamental_sine = np.real(ifft(fft_out_fundamental)) # inverse transform for fundamental
+
+        i_search = [-1, 0, 1]
+        # Check peak to peak value of fundamental sine wave should be greater than 1.5 dB
+        fundamental_pp = max(fundamental_sine) - min(fundamental_sine)
+        if (fundamental_pp > 1.5):
+            for i in [2, 3]:
+                # estimate harmonics
+                harmonic_freq = fundamental_freq * i
+                i_harmonic = (np.abs(freqs_ps - harmonic_freq)).argmin()
+                harmonic_freq = freqs_ps[i_harmonic]
+
+                # check if local max
+                if i_harmonic not in i_max_ps:
+                    # check surrounding indices
+                    i_harmonic_new = None
+                    if i == 2:
+                        i_search = [-1, 0, 1]
                     else:
-                        # This means the estimated harmonic frequency is a local maximum
-                        # Get indices around harmonic for inclusion in inverse transform
-                        i_harmonic = [
-                            i_harmonic + x for x in i_search
-                            if i_harmonic + x in range(len(ps))
+                        i_search = [-2, -1, 0, 1, 2]
+
+                    # get indices from search
+                    i_harmonic_search = [(i_harmonic + x) for x in i_search
+                                        if (i_harmonic + x) in range(len(ps))
+                                    ]
+
+                    if np.any([x in i_max_ps for x in i_harmonic_search]):
+                        i_surrounding_peaks = [
+                            x for x in i_harmonic_search if x in i_max_ps
                         ]
+                        vals_peaks = ps[i_surrounding_peaks]
+                        i_harmonic_new = i_surrounding_peaks[
+                            vals_peaks.tolist().index(max(vals_peaks))]
 
-                    # create harmonics if any
-                    harmonic_sine = np.zeros_like(fft_out)
-                    i_pos_freqs = i_freq[i_harmonic]
-                    i_neg_freqs = -i_freq[i_harmonic]
-                    harmonic_sine[i_pos_freqs] = fft_out[i_pos_freqs] 
-                    harmonic_sine[i_neg_freqs] = fft_out[i_neg_freqs]  
-                    harmonic_sine = np.real(ifft(harmonic_sine))
-                    harmonic_pp = max(harmonic_sine) - min(harmonic_sine)
+                    if i_harmonic_new:
+                        i_harmonic = [
+                            i_harmonic_new + x for x in i_search
+                            if i_harmonic_new + x in range(len(ps))
+                        ]
+                    else:
+                        continue
+                else:
+                    # This means the estimated harmonic frequency is a local maximum
+                    # Get indices around harmonic for inclusion in inverse transform
+                    i_harmonic = [
+                        i_harmonic + x for x in i_search
+                        if i_harmonic + x in range(len(ps))
+                    ]
 
-                    if (harmonic_pp > 1.5):
-                        i_includes += i_harmonic
+                # create harmonics if any
+                harmonic_sine = np.zeros_like(fft_out)
+                i_pos_freqs = i_freq[i_harmonic]
+                i_neg_freqs = -i_freq[i_harmonic]
+                harmonic_sine[i_pos_freqs] = fft_out[i_pos_freqs] 
+                harmonic_sine[i_neg_freqs] = fft_out[i_neg_freqs]  
+                harmonic_sine = np.real(ifft(harmonic_sine))
+                harmonic_pp = max(harmonic_sine) - min(harmonic_sine)
 
-            # Create array with just fundamental and relevant harmonics
-            fft_output_harmonics = np.zeros_like(fft_out)
-            i_pos_freqs = i_freq[i_includes]
-            i_neg_freqs = -i_freq[i_includes]
-            fft_output_harmonics[i_pos_freqs] = fft_out[i_pos_freqs]  # first put the positive frequencies in
-            fft_output_harmonics[i_neg_freqs] = fft_out[i_neg_freqs]  # next put the negative frequencies in
+                if (harmonic_pp > 1.5):
+                    i_includes += i_harmonic
 
-            # Inverse Fourier transform
-            ifft_out = np.real(ifft(fft_output_harmonics))
+        # Create array with just fundamental and relevant harmonics
+        fft_output_harmonics = np.zeros_like(fft_out)
+        i_pos_freqs = i_freq[i_includes]
+        i_neg_freqs = -i_freq[i_includes]
+        fft_output_harmonics[i_pos_freqs] = fft_out[i_pos_freqs]  # first put the positive frequencies in
+        fft_output_harmonics[i_neg_freqs] = fft_out[i_neg_freqs]  # next put the negative frequencies in
 
-            # Calculate mod depth using percentiles
-            L5 = np.percentile(ifft_out, 95)
-            L95 = np.percentile(ifft_out, 5)
-            mod_depth = L5 - L95
+        # Inverse Fourier transform
+        ifft_out = np.real(ifft(fft_output_harmonics))
 
-            self.detected.append(1)
-            self.frequency.append(fundamental_freq)
-            self.depth.append(mod_depth)
-            self.prominence.append(prominence)
-            ii += int(self.envelope_Fs / 2)
+        # Calculate mod depth using percentiles
+        L5 = np.percentile(ifft_out, 95)
+        L95 = np.percentile(ifft_out, 5)
+        mod_depth = L5 - L95
 
-        return self.detected, self.frequency, self.depth, self.prominence
+        if mod_depth < self.depth_threshold:
+            results = {'detected'    : 0,
+                       'freq'        : 0,
+                       'depth'       : 0,
+                       'prominence'  : 0
+            }
+        else:
+            results = {'detected'    : 1,
+                       'freq'        : fundamental_freq,
+                       'depth'       : mod_depth,
+                       'prominence'  : prominence
+            }
+
+        return results
