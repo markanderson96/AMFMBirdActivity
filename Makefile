@@ -36,6 +36,10 @@ features:
 train: 
 	$(PYTHON_INTERPRETER) src/models/train_model.py
 
+### Create visuals
+visuals:
+	$(PYTHON_INTERPRETER) src/visualization/visualize.py
+
 ## Delete all compiled Python files
 clean:
 	find . -type f -name "*.py[co]" -delete
