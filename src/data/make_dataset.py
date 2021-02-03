@@ -5,6 +5,7 @@ import logging
 import os
 import yaml
 import sys
+import time
 import multiprocessing
 from pathlib import Path
 from dotenv import find_dotenv, load_dotenv
@@ -19,6 +20,7 @@ def runProcess(file_queue):
     while not file_queue.empty():
         filename = file_queue.get(block=False)
         makeData(filename)
+        time.sleep(0.1)
 
 def makeData(file):
     logging.info('Pre-processing: ' + file)
