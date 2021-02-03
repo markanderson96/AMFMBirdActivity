@@ -8,7 +8,7 @@ class noiseReduction(object):
         self.window_size = window_size
         self.window_overlap = window_overlap
         self.num_filters = -(start_band) + end_band + 1
-        self.r_filters = r_filters
+        self.r_filters = int(r_filters)
         self.window = np.hanning(self.window_size)
         self.ofb = FractionalOctaveFilterbank(samplerate,
                                               order=8,
