@@ -8,6 +8,7 @@ import yaml
 import logging
 import glob
 import os
+import time
 import multiprocessing
 
 from scipy import signal
@@ -24,6 +25,7 @@ def runProcess(file_queue):
     while not file_queue.empty():
         filename = file_queue.get(block=False)
         makeFeatures(filename)
+        time.sleep(0.1)
 
 def makeFeatures(file):
     # load file
@@ -173,7 +175,7 @@ if __name__ == '__main__':
     
 
     #create and fill queue
-    file_queue = multiprocessing.Queue()
+    file_queue = multiprocessing.Queue(maxsize=687)
     for file in os.listdir(data_dir):
        file_queue.put(file)
 
