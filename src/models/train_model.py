@@ -100,19 +100,25 @@ def main():
                                 verbose=0)
 
     clf1.fit(x_train, y_train)
-    y_pred = clf1.predict(x_test)
+    y_pred_rf = clf1.predict(x_test)
     print('Random Forest')
-    report(y_test, y_pred)
+    report(y_test, y_pred_rf)
 
     clf2.fit(x_train, y_train)
-    y_pred = clf2.predict(x_test)
+    y_pred_svm = clf2.predict(x_test)
     print('SVM')
-    report(y_test, y_pred)
+    report(y_test, y_pred_svm)
 
     eclf.fit(x_train, y_train)
-    y_pred = eclf.predict(x_test)
+    y_pred_combo = eclf.predict(x_test)
     print('Combo')
-    report(y_test, y_pred)
+    report(y_test, y_pred_combo)
+
+    with open('results.csv', 'a') as csv_file:
+        csv_file.write('{},{},{}\n'.format(metrics.f1_score(y_test, y_pred_rf),
+                                           metrics.f1_score(y_test, y_pred_svm),
+                                           metrics.f1_score(y_test, y_pred_combo)))
+    csv_file.close()
 
 def report(y_test, y_pred):
     # Reports
@@ -124,6 +130,8 @@ def report(y_test, y_pred):
     print("Precision:", metrics.precision_score(y_test, y_pred))
     # Model Recall: what percentage of positive tuples are labelled as such?
     print("Recall:", metrics.recall_score(y_test, y_pred))
+    # F1 Score
+    print("F1 Score:", metrics.f1_score(y_test, y_pred))
     # ROC_AUC
     fpr, tpr, _thresholds = metrics.roc_curve(y_test, y_pred)
     print("AUC:", metrics.auc(fpr, tpr))
