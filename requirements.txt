@@ -22,6 +22,8 @@ pandas==1.2.0
 Pillow==8.1.0
 pycodestyle==2.6.0
 pycparser==2.20
+pyDOE==0.3.8
+pyDOE2==1.3.0
 pyfilterbank @ git+https://github.com/SiggiGue/pyfilterbank.git@5d74af8d936d79dcb61f7f35a3120d79ea93480b
 pyflakes==2.2.0
 Pygments==2.7.4
