@@ -1,16 +1,15 @@
+
 # [general]
 general:
   dataset: nips4b
 
 # [classifier settings]
 classifier:
-  classifier_type: svm
   save_model: True
   test_size: 0.2
   shuffle: True
   random_state: 0
   verbose: 0
-  grid_search: True
   scoring: f1
 
 random_forest:
@@ -31,14 +30,14 @@ svm:
 activity_detector:
   window_length: 0.1
   window_overlap: 0.05
-  block: 0.5
-  threshold: 0.4
+  block: 0.25
+  threshold: 0.35
   band_start: 800
   band_end: 16000
 
 noise_reduce:
-  window_length: 0.25
-  overlap: 0.125
+  window_length: 0.1
+  overlap: 0.05
   nth_oct: 6
   norm_freq: 2000
   start_band: -4
@@ -51,12 +50,12 @@ band_filter:
 
 # Features
 AM:
-  min_mod: 1
-  max_mod: 10
-  prominence_cutoff: 3
+  min_mod: 1.0
+  max_mod: 8.0
+  prominence_cutoff: 3.0
   depth_threshold: 0.01
 
 FM:
   window_length: 0.02
   window_overlap: 0.01
-  threshold: 0.3
+  threshold: 0.2
