@@ -114,7 +114,7 @@ def main():
                 'min_samples_leaf': min_samples_leaf,
                 'bootstrap': bootstrap}
 
-    grid_rf = GridSearchCV(estimator=RandomForestClassifier(), cv=5, n_jobs=-1, param_grid=params_rf, scoring='f1')
+    grid_rf = GridSearchCV(estimator=RandomForestClassifier(random_state=51171), cv=5, n_jobs=-1, param_grid=params_rf, scoring='f1')
 
     grid_rf.fit(x_train, y_train)
     print(grid_rf.best_params_)
@@ -128,12 +128,12 @@ def main():
     # Minimum number of samples required to split a node
     order = [2, 3, 4, 5]
     # Create the random grid
-    params_svm = {'c': c,
+    params_svm = {'C': c,
                 'kernel': kernel,
                 'gamma': gamma,
-                'order': order}
+                'degree': order}
 
-    grid_svm = GridSearchCV(estimator=RandomForestClassifier(), cv=5, n_jobs=-1, param_grid=params_svm, scoring='f1')
+    grid_svm = GridSearchCV(estimator=SVC(random_state=51171), cv=5, n_jobs=-1, param_grid=params_svm, scoring='f1')
 
     grid_svm.fit(x_train, y_train)
     print(grid_svm.best_params_)
