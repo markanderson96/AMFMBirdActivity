@@ -183,7 +183,7 @@ class AM(object):
             result.prominence.append(results_list[band_of_interest].prominence[i])
             result.env.extend(results_list[band_of_interest].env[i * 50 : i * 50 + 100])
         
-        return result.detected, result.frequency, result.depth, result.prominence, result.env
+        return result.detected, result.frequency, result.depth, result.prominence
 
     def _calcAMBand(self, Leq):
         """ 
