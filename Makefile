@@ -7,7 +7,7 @@
 PROJECT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 PROFILE = default
 PROJECT_NAME = AMFM_BirdActivity
-PYTHON_INTERPRETER = python
+PYTHON_INTERPRETER = python3
 
 ifeq (,$(shell which conda))
 HAS_CONDA=False
@@ -70,7 +70,7 @@ create_environment:
 ifeq (True,$(HAS_CONDA))
 		@echo ">>> Detected conda, creating conda environment."
 ifeq (3,$(findstring 3,$(PYTHON_INTERPRETER)))
-	conda create --name $(PROJECT_NAME) python=3
+	conda create --name $(PROJECT_NAME) python=3.8.6
 else
 	conda create --name $(PROJECT_NAME) python=2.7
 endif
@@ -102,7 +102,7 @@ test_environment:
 # Inspired by <http://marmelab.com/blog/2016/02/29/auto-documented-makefile.html>
 # sed script explained:
 # /^##/:
-# 	* save line in hold space
+# 	* save line in hold 
 # 	* purge line
 # 	* Loop:
 # 		* append newline + line to hold space
